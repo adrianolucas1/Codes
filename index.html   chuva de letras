@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Matrix Digital Rain</title>
+    <style>
+        /* Remove margens e deixa o fundo preto */
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="matrix"></canvas>
+
+    <script>
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+
+        // Ajusta o canvas para ocupar a tela inteira
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Caracteres da Matrix
+        const letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$+-*/=%\"'#&_(),.;:?!";
+        const font_size = 18;
+        const colunas = canvas.width / font_size;
+
+        // Array para controlar a posição Y de cada gota
+        const gotas = [];
+        for (let x = 0; x < colunas; x++) {
+            gotas[x] = 1; 
+        }
+
+        function desenhar() {
+            // Fundo preto com opacidade baixa para criar o rastro
+            ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Cor do texto
+            ctx.fillStyle = "#0F0"; // Verde Matrix
+            ctx.font = font_size + "px arial";
+
+            // Desenha os caracteres
+            for (let i = 0; i < gotas.length; i++) {
+                const texto = letras.charAt(Math.floor(Math.random() * letras.length));
+                ctx.fillText(texto, i * font_size, gotas[i] * font_size);
+
+                // Reseta a gota para o topo aleatoriamente após atravessar a tela
+                if (gotas[i] * font_size > canvas.height && Math.random() > 0.975) {
+                    gotas[i] = 0;
+                }
+
+                gotas[i]++;
+            }
+        }
+
+        // Redimensiona se a janela mudar de tamanho
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Loop da animação (aprox. 30 FPS)
+        setInterval(desenhar, 35);
+    </script>
+</body>
+</html>
