@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Show do Milhão PRO MAX</title>
+
+<!-- Fonte -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600;800&display=swap" rel="stylesheet">
+
+<!-- Biblioteca de confete -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+
+/* =============================
+   CONFIGURAÇÕES GERAIS
+============================= */
+
+:root{
+--gold:#ffd700;
+--bg:#020617;
+--card:#041c3a;
+--correct:#22c55e;
+--wrong:#ef4444;
+}
+
+*{box-sizing:border-box;font-family:Poppins,sans-serif}
+
+body{
+margin:0;
+height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
+background:radial-gradient(circle at center,#001233,#000814);
+color:white;
+overflow:hidden;
+}
+
+/* =============================
+   CARD PRINCIPAL 3D
+============================= */
+
+#game-container{
+width:95%;
+max-width:500px;
+padding:30px;
+border-radius:24px;
+background:linear-gradient(145deg,#001d3d,#000814);
+box-shadow:0 25px 50px rgba(0,0,0,.8);
+transform:perspective(1200px) rotateX(6deg);
+transition:.6s;
+}
+
+#game-container:hover{
+transform:perspective(1200px) rotateX(0deg);
+}
+
+.hidden{display:none}
+
+/* =============================
+   TELA INICIAL
+============================= */
+
+.logo{
+font-size:2.5rem;
+font-weight:800;
+color:var(--gold);
+text-align:center;
+text-shadow:0 0 15px rgba(255,215,0,.8);
+}
+
+.start-btn{
+width:100%;
+padding:16px;
+border:none;
+border-radius:12px;
+background:var(--gold);
+font-weight:800;
+cursor:pointer;
+margin-top:20px;
+transition:.3s;
+}
+
+.start-btn:hover{
+transform:scale(1.05);
+}
+
+/* =============================
+   QUIZ
+============================= */
+
+.status-bar{
+display:flex;
+justify-content:space-between;
+margin-bottom:10px;
+font-weight:600;
+}
+
+#timer{
+font-size:1.6rem;
+color:var(--gold);
+}
+
+.q-media{
+height:180px;
+border-radius:12px;
+overflow:hidden;
+margin-bottom:10px;
+}
+
+.q-media img{
+width:100%;
+height:100%;
+object-fit:cover;
+}
+
+.options-list{
+display:grid;
+gap:8px;
+}
+
+.btn-opt{
+padding:12px;
+border-radius:10px;
+border:1px solid rgba(255,255,255,.2);
+background:rgba(255,255,255,.05);
+color:white;
+cursor:pointer;
+transition:.2s;
+}
+
+.btn-opt:hover{
+transform:translateY(-2px);
+border-color:var(--gold);
+}
+
+.correct{background:var(--correct)!important}
+.wrong{background:var(--wrong)!important}
+
+/* =============================
+   RESULTADO E RANKING
+============================= */
+
+.rank-item{
+display:flex;
+justify-content:space-between;
+padding:6px;
+border-bottom:1px solid rgba(255,255,255,.1);
+}
+
+.first{color:gold;font-weight:bold}
+
+/* =============================
+   DINHEIRO CAINDO
+============================= */
+
+.money{
+position:fixed;
+top:-40px;
+font-size:24px;
+animation:fall linear forwards;
+}
+
+@keyframes fall{
+to{transform:translateY(110vh);opacity:0}
+}
+
+</style>
+</head>
+<body>
+
+<div id="game-container">
+
+<!-- TELA INICIAL -->
+<div id="start-screen">
+<div class="logo">SHOW DO MILHÃO</div>
+<button class="start-btn" onclick="startGame()">COMEÇAR</button>
+</div>
+
+<!-- TELA DO QUIZ -->
+<div id="quiz-screen" class="hidden">
+<div class="status-bar">
+<span id="progress">1/7</span>
+<div id="timer">50</div>
+</div>
+
+<div class="q-media"><img id="q-img"></div>
+<h3 id="q-text"></h3>
+<div id="options-box" class="options-list"></div>
+</div>
+
+<!-- TELA FINAL -->
+<div id="result-screen" class="hidden">
+<h2 id="res-title"></h2>
+<p id="res-msg"></p>
+
+<div id="name-box" class="hidden">
+<input id="playerName" placeholder="Digite seu nome" style="padding:8px;width:100%;border-radius:8px;border:none;margin-top:10px">
+<button class="start-btn" onclick="saveScore()">Salvar Pontuação</button>
+</div>
+
+<div id="ranking"></div>
+
+<button class="start-btn" onclick="location.reload()">Jogar novamente</button>
+</div>
+
+</div>
+
+<!-- =============================
+     ÁUDIOS DO JOGO
+============================= -->
+
+<audio id="bgMusic" loop src="https://assets.mixkit.co/music/preview/mixkit-game-show-suspense-waiting-667.mp3"></audio>
+<audio id="correctSound" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3"></audio>
+<audio id="wrongSound" src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3"></audio>
+<audio id="winSound" src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"></audio>
+<audio id="applause" src="https://assets.mixkit.co/sfx/preview/mixkit-small-group-cheer-and-applause-518.mp3"></audio>
+
+<script>
+
+/* =============================
+   PERGUNTAS (mais simples)
+============================= */
+
+const quizData=[
+{q:"Em que país ficam as pirâmides do Egito?",img:"https://images.unsplash.com/photo-1544986581-efac024faf62",opts:["Egito","Brasil","México","Itália"],ans:0},
+{q:"Onde fica o Taj Mahal?",img:"https://images.unsplash.com/photo-1564507592333-c60657eea523",opts:["Índia","China","Japão","Espanha"],ans:0},
+{q:"Qual é o maior planeta do Sistema Solar?",img:"https://images.unsplash.com/photo-1614732414444-096e5f1122d5",opts:["Terra","Marte","Júpiter","Saturno"],ans:2},
+{q:"Quem criou a Teoria da Relatividade?",img:"https://images.unsplash.com/photo-1532094349884-543bc11b234d",opts:["Newton","Einstein","Tesla","Galileu"],ans:1},
+{q:"A Grande Muralha fica em qual país?",img:"https://images.unsplash.com/photo-1508804185872-d7badad00f7d",opts:["China","Índia","Coreia","Japão"],ans:0},
+{q:"Qual é o símbolo do ouro na tabela periódica?",img:"https://images.unsplash.com/photo-1610375461246-83df859d849d",opts:["Ag","Au","Fe","Cu"],ans:1},
+{q:"Qual é o maior mamífero do mundo?",img:"https://images.unsplash.com/photo-1546182990-dffeafbe841d",opts:["Elefante","Baleia azul","Girafa","Orca"],ans:1}
+];
+
+/* =============================
+   VARIÁVEIS DE CONTROLE
+============================= */
+
+let idx=0,time=50,timer,startTime;
+
+/* =============================
+   INICIAR JOGO
+============================= */
+
+function startGame(){
+document.getElementById("start-screen").classList.add("hidden");
+document.getElementById("quiz-screen").classList.remove("hidden");
+
+document.getElementById("bgMusic").volume=0.4;
+document.getElementById("bgMusic").play();
+
+startTime=Date.now();
+render();
+}
+
+/* =============================
+   MOSTRAR PERGUNTA
+============================= */
+
+function render(){
+clearInterval(timer);
+time=50;
+document.getElementById("timer").innerText=time;
+
+let q=quizData[idx];
+document.getElementById("progress").innerText=`${idx+1}/7`;
+document.getElementById("q-text").innerText=q.q;
+document.getElementById("q-img").src=q.img+"?auto=format&fit=crop&w=900&q=60";
+
+let box=document.getElementById("options-box");
+box.innerHTML="";
+
+q.opts.forEach((opt,i)=>{
+let btn=document.createElement("button");
+btn.className="btn-opt";
+btn.innerText=opt;
+btn.onclick=()=>choose(i,btn);
+box.appendChild(btn);
+});
+
+timer=setInterval(()=>{
+time--;
+document.getElementById("timer").innerText=time;
+if(time<=0) end(false,"O tempo acabou!");
+},1000);
+}
+
+/* =============================
+   VERIFICAR RESPOSTA
+============================= */
+
+function choose(i,btn){
+clearInterval(timer);
+let correct=quizData[idx].ans;
+let buttons=document.querySelectorAll(".btn-opt");
+buttons.forEach(b=>b.disabled=true);
+
+if(i===correct){
+correctSound.play();
+btn.classList.add("correct");
+setTimeout(()=>{
+idx++;
+idx<quizData.length?render():end(true,"VOCÊ GANHOU!");
+},700);
+}else{
+wrongSound.play();
+btn.classList.add("wrong");
+buttons[correct].classList.add("correct");
+setTimeout(()=>end(false,"Você errou!"),900);
+}
+}
+
+/* =============================
+   FINALIZAR JOGO
+============================= */
+
+function end(win,msg){
+
+bgMusic.pause();
+
+document.getElementById("quiz-screen").classList.add("hidden");
+document.getElementById("result-screen").classList.remove("hidden");
+
+document.getElementById("res-title").innerText=win?"🏆 VITÓRIA":"GAME OVER";
+document.getElementById("res-msg").innerText=msg;
+
+if(win){
+winSound.play();
+applause.play();
+confetti({particleCount:200,spread:120});
+moneyRain();
+document.getElementById("name-box").classList.remove("hidden");
+}else{
+showRanking();
+}
+}
+
+/* =============================
+   DINHEIRO CAINDO
+============================= */
+
+function moneyRain(){
+for(let i=0;i<40;i++){
+let m=document.createElement("div");
+m.className="money";
+m.innerHTML="💰";
+m.style.left=Math.random()*100+"vw";
+m.style.animationDuration=(Math.random()*2+2)+"s";
+document.body.appendChild(m);
+setTimeout(()=>m.remove(),4000);
+}
+}
+
+/* =============================
+   SALVAR RANKING
+============================= */
+
+function saveScore(){
+let name=document.getElementById("playerName").value.trim();
+if(!name) return alert("Digite seu nome!");
+
+let total=((Date.now()-startTime)/1000).toFixed(1);
+
+let ranking=JSON.parse(localStorage.getItem("rankingMilhao"))||[];
+ranking.push({name,time:parseFloat(total)});
+ranking.sort((a,b)=>a.time-b.time);
+ranking=ranking.slice(0,5);
+
+localStorage.setItem("rankingMilhao",JSON.stringify(ranking));
+
+document.getElementById("name-box").classList.add("hidden");
+showRanking();
+}
+
+/* =============================
+   MOSTRAR RANKING
+============================= */
+
+function showRanking(){
+let ranking=JSON.parse(localStorage.getItem("rankingMilhao"))||[];
+let box=document.getElementById("ranking");
+box.innerHTML="<h3>🏆 Ranking</h3>";
+
+ranking.forEach((p,i)=>{
+box.innerHTML+=`
+<div class="rank-item ${i===0?'first':''}">
+<span>${i+1}. ${p.name}</span>
+<span>${p.time}s</span>
+</div>`;
+});
+}
+
+</script>
+</body>
+</html>
