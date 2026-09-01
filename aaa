@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Show do Milhão PRO 3D</title>
+
+<!-- Fonte -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600;800&display=swap" rel="stylesheet">
+
+<!-- Confete -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+:root{
+--gold:#ffd700;
+--bg:#020617;
+--card:#041c3a;
+--correct:#22c55e;
+--wrong:#ef4444;
+}
+
+*{box-sizing:border-box;font-family:Poppins,sans-serif}
+
+body{
+margin:0;
+background: radial-gradient(circle at top,#001233,#000814);
+display:flex;
+align-items:center;
+justify-content:center;
+height:100vh;
+color:white;
+overflow:auto;
+}
+
+/* CARD 3D */
+#game-container{
+width:95%;
+max-width:480px;
+padding:30px;
+margin:30px 0;
+border-radius:25px;
+background:linear-gradient(145deg,#001d3d,#000814);
+box-shadow:
+0 0 25px rgba(255,215,0,.15),
+0 20px 40px rgba(0,0,0,.8),
+inset 0 0 20px rgba(255,255,255,.05);
+transform:perspective(1000px) rotateX(5deg);
+transition:.6s;
+}
+
+#game-container:hover{
+transform:perspective(1000px) rotateX(0deg) scale(1.01);
+}
+
+.hidden{display:none}
+
+h1{
+text-align:center;
+color:var(--gold);
+letter-spacing:2px;
+}
+
+.start-btn{
+width:100%;
+padding:18px;
+border:none;
+border-radius:12px;
+background:var(--gold);
+font-weight:800;
+font-size:1.2rem;
+cursor:pointer;
+transition:.3s;
+box-shadow:0 0 15px rgba(255,215,0,.6);
+}
+
+.start-btn:hover{
+transform:scale(1.05);
+box-shadow:0 0 25px rgba(255,215,0,1);
+}
+
+/* STATUS */
+.status-bar{
+display:flex;
+justify-content:space-between;
+margin-bottom:15px;
+}
+
+#timer{
+font-size:2rem;
+font-weight:800;
+color:var(--gold);
+}
+
+/* IMAGE */
+.q-media{
+height:200px;
+border-radius:15px;
+overflow:hidden;
+margin-bottom:15px;
+box-shadow:0 10px 25px rgba(0,0,0,.6);
+}
+
+.q-media img{
+width:100%;
+height:100%;
+object-fit:cover;
+}
+
+/* OPTIONS */
+.options-list{
+display:grid;
+gap:10px;
+}
+
+.btn-opt{
+padding:15px;
+border-radius:12px;
+border:1px solid rgba(255,255,255,.15);
+background:rgba(255,255,255,.05);
+color:white;
+cursor:pointer;
+transition:.25s;
+font-size:1rem;
+}
+
+.btn-opt:hover{
+transform:translateY(-3px);
+border-color:var(--gold);
+box-shadow:0 5px 15px rgba(0,0,0,.5);
+}
+
+.correct{
+background:var(--correct)!important;
+}
+
+.wrong{
+background:var(--wrong)!important;
+animation:shake .3s;
+}
+
+@keyframes shake{
+25%{transform:translateX(-6px)}
+75%{transform:translateX(6px)}
+}
+
+.result-screen{
+text-align:center;
+}
+</style>
+</head>
+<body>
+
+<div id="game-container">
+
+<div id="start-screen">
+<h1>SHOW DO MILHÃO</h1>
+<p style="text-align:center;opacity:.8">Responda tudo e vire milionário</p>
+<button class="start-btn" onclick="startGame()">COMEÇAR</button>
+</div>
+
+<div id="quiz-screen" class="hidden">
+<div class="status-bar">
+<span id="progress">1/7</span>
+<div id="timer">50</div>
+</div>
+
+<div class="q-media">
+<img id="q-img">
+</div>
+
+<h2 id="q-text"></h2>
+<div id="options-box" class="options-list"></div>
+</div>
+
+<div id="result-screen" class="hidden result-screen">
+<h1 id="res-title"></h1>
+<p id="res-msg"></p>
+<button class="start-btn" onclick="location.reload()">Jogar novamente</button>
+</div>
+
+</div>
+
+<script>
+const quizData=[
+{
+q:"Qual país é banhado pelo Mar Mediterrâneo?",
+img:"https://images.unsplash.com/photo-1544986581-efac024faf62",
+opts:["Brasil","Egito","Canadá","Japão"],
+ans:1
+},
+{
+q:"Qual o nome deste monumento?",
+img:"https://images.unsplash.com/photo-1564507592333-c60657eea523",
+opts:["Coliseu","Machu Picchu","Taj Mahal","Petra"],
+ans:2
+},
+{
+q:"Maior planeta do sistema solar?",
+img:"https://images.unsplash.com/photo-1614732414444-096e5f1122d5",
+opts:["Terra","Marte","Saturno","Júpiter"],
+ans:3
+},
+{
+q:"Quem criou a Teoria da Relatividade?",
+img:"https://images.unsplash.com/photo-1532094349884-543bc11b234d",
+opts:["Newton","Einstein","Marie Curie","Galileu"],
+ans:1
+},
+{
+q:"Onde fica a Grande Muralha?",
+img:"https://images.unsplash.com/photo-1508804185872-d7badad00f7d",
+opts:["China","Índia","Egito","EUA"],
+ans:0
+},
+{
+q:"Símbolo químico Au?",
+img:"https://images.unsplash.com/photo-1610375461246-83df859d849d",
+opts:["Prata","Cobre","Alumínio","Ouro"],
+ans:3
+},
+{
+q:"Maior mamífero do planeta?",
+img:"https://images.unsplash.com/photo-1546182990-dffeafbe841d",
+opts:["Elefante","Baleia Azul","Tubarão","Girafa"],
+ans:1
+}
+];
+
+let idx=0,time=50,timer;
+
+function startGame(){
+document.getElementById("start-screen").classList.add("hidden");
+document.getElementById("quiz-screen").classList.remove("hidden");
+render();
+}
+
+function render(){
+clearInterval(timer);
+time=50;
+document.getElementById("timer").innerText=time;
+
+let q=quizData[idx];
+document.getElementById("progress").innerText=`${idx+1}/7`;
+document.getElementById("q-text").innerText=q.q;
+
+let img=document.getElementById("q-img");
+img.src=q.img+"?auto=format&fit=crop&w=900&q=60";
+img.onerror=()=>img.src="https://via.placeholder.com/800x400?text=Imagem";
+
+let box=document.getElementById("options-box");
+box.innerHTML="";
+
+q.opts.forEach((opt,i)=>{
+let btn=document.createElement("button");
+btn.className="btn-opt";
+btn.innerText=opt;
+btn.onclick=()=>choose(i,btn);
+box.appendChild(btn);
+});
+
+timer=setInterval(()=>{
+time--;
+document.getElementById("timer").innerText=time;
+if(time<=0) end(false,"Tempo esgotou!");
+},1000);
+}
+
+function choose(i,btn){
+clearInterval(timer);
+let correct=quizData[idx].ans;
+let buttons=document.querySelectorAll(".btn-opt");
+buttons.forEach(b=>b.disabled=true);
+
+if(i===correct){
+btn.classList.add("correct");
+setTimeout(()=>{
+idx++;
+idx<quizData.length?render():end(true,"VOCÊ GANHOU 1 MILHÃO!!!");
+},800);
+}else{
+btn.classList.add("wrong");
+buttons[correct].classList.add("correct");
+setTimeout(()=>end(false,"Você errou "),1000);
+}
+}
+
+function end(win,msg){
+document.getElementById("quiz-screen").classList.add("hidden");
+document.getElementById("result-screen").classList.remove("hidden");
+document.getElementById("res-title").innerText=win?" VITÓRIA":"GAME OVER";
+document.getElementById("res-msg").innerText=msg;
+
+if(win) confetti({particleCount:200,spread:120});
+}
+</script>
+</body>
+</html>
